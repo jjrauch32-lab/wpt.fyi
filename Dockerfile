@@ -54,3 +54,6 @@ RUN apt-get update -qqy && apt-get install -qqy --no-install-suggests \
     gcloud config set core/disable_usage_reporting true && \
     gcloud config set component_manager/disable_update_check true && \
     gcloud --version
+
+    RUN chmod a+rx $HOME && useradd --uid 9999 --user-group --create-home browser
+    
