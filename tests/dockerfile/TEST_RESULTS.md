@@ -23,6 +23,11 @@
 
 ## Test Results Summary
 
+RUN export DISTRO_CODENAME=$(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) && \
+    echo "deb [signed-by=/usr/share/keyrings/corretto.gpg] https://apt.corretto.aws stable main" > /etc/apt/sources.list.d/corretto.list && \
+    ...
+    
+
 ### ✅ Passing Tests (11/21)
 
 1. **TestDockerfileExists** - File exists and is readable
