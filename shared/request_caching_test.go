@@ -13,7 +13,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	"github.com/web-platform-tests/wpt.fyi/shared/sharedtest"
@@ -23,7 +23,7 @@ type failReader struct{}
 type okHandler struct{}
 
 var (
-	errFailRead = errors.New("Failed read")
+	errFailRead = errors.New("failed read")
 	ok          = []byte("OK")
 )
 

@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -12,11 +11,11 @@ import (
 	"testing"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/web-platform-tests/wpt.fyi/api/query"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	metrics "github.com/web-platform-tests/wpt.fyi/shared/metrics"
+	"go.uber.org/mock/gomock"
 )
 
 const testNumShards = 16
@@ -860,7 +859,7 @@ func TestBindExecute_LabelWithWildcards(t *testing.T) {
 	})
 	metadata := map[string][]string{
 		"/foo/bar/b.html": {"random"},
-		"/a/*":  {"interop1", "INTEROP2"},
+		"/a/*":            {"interop1", "INTEROP2"},
 		"/d/e/f":          {""},
 		matchingTestName:  {"foo"},
 	}
@@ -869,6 +868,62 @@ func TestBindExecute_LabelWithWildcards(t *testing.T) {
 	// this matches the wildcard "/a/*". When mapped to test runs, that
 	// means it should match "/a/b/c" due to wildcard expansion.
 	testlabel := query.And{[]query.ConcreteQuery{query.TestLabel{Label: "interop2", Metadata: metadata}, query.TestLabel{Label: "interop1", Metadata: metadata}}}
+	plan, err := idx.Bind(runs, testlabel)
+	assert.Nil(t, err)
+
+	res := plan.Execute(runs, query.AggregationOpts{})
+	srs, ok := res.([]shared.SearchResult)
+	assert.True(t, ok)
+
+	assert.Equal(t, 1, len(srs))
+	expectedResult := shared.SearchResult{
+		Test: matchingTestName,
+		LegacyStatus: []shared.LegacySearchRunResult{
+			{
+				// Only matching test passes.
+				Passes:        1,
+				Total:         1,
+				Status:        "",
+				NewAggProcess: true,
+			},
+		},
+	}
+
+	assert.Equal(t, expectedResult, srs[0])
+}
+
+func TestBindExecute_TestWebFeature(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	loader := NewMockReportLoader(ctrl)
+	idx, err := NewShardedWPTIndex(loader, testNumShards)
+	assert.Nil(t, err)
+
+	matchingTestName := "/a/b/c"
+	runs := mockTestRuns(loader, idx, []testRunData{
+		{
+			shared.TestRun{ID: 1},
+			&metrics.TestResultsReport{
+				Results: []*metrics.TestResults{
+					{
+						Test:   matchingTestName,
+						Status: "PASS",
+					},
+					{
+						Test:   "/d/e/f",
+						Status: "FAIL",
+					},
+				},
+			},
+		},
+	})
+	data := shared.WebFeaturesData{
+		"/foo/bar/b.html": {"random": nil},
+		matchingTestName:  {"avif": nil, "grid": nil},
+		"/d/e/f":          {"": nil},
+	}
+
+	testlabel := query.TestWebFeature{WebFeature: "grid", WebFeaturesData: data}
 	plan, err := idx.Bind(runs, testlabel)
 	assert.Nil(t, err)
 
@@ -974,11 +1029,19 @@ func TestBindExecute_IsTentative(t *testing.T) {
 			&metrics.TestResultsReport{
 				Results: []*metrics.TestResults{
 					{
-						Test:   "/a/b/c",
+						Test:   "/a/b/c.html",
 						Status: "PASS",
 					},
 					{
 						Test:   "/a/b/c.tentative.html",
+						Status: "PASS",
+					},
+					{
+						Test:   "/a/b/tentative/c.html",
+						Status: "PASS",
+					},
+					{
+						Test:   "/a/b/tentative/c.tentative.html",
 						Status: "PASS",
 					},
 				},
@@ -994,20 +1057,42 @@ func TestBindExecute_IsTentative(t *testing.T) {
 	srs, ok := res.([]shared.SearchResult)
 	assert.True(t, ok)
 
-	assert.Equal(t, 1, len(srs))
-	expectedResult := shared.SearchResult{
-		Test: "/a/b/c.tentative.html",
-		LegacyStatus: []shared.LegacySearchRunResult{
-			{
-				Passes:        1,
-				Total:         1,
-				Status:        "",
-				NewAggProcess: true,
+	assert.Equal(t, 3, len(srs))
+	assert.Equal(t, resultSet(t, []shared.SearchResult{
+		{
+			Test: "/a/b/c.tentative.html",
+			LegacyStatus: []shared.LegacySearchRunResult{
+				{
+					Passes:        1,
+					Total:         1,
+					Status:        "",
+					NewAggProcess: true,
+				},
 			},
 		},
-	}
-
-	assert.Equal(t, expectedResult, srs[0])
+		{
+			Test: "/a/b/tentative/c.html",
+			LegacyStatus: []shared.LegacySearchRunResult{
+				{
+					Passes:        1,
+					Total:         1,
+					Status:        "",
+					NewAggProcess: true,
+				},
+			},
+		},
+		{
+			Test: "/a/b/tentative/c.tentative.html",
+			LegacyStatus: []shared.LegacySearchRunResult{
+				{
+					Passes:        1,
+					Total:         1,
+					Status:        "",
+					NewAggProcess: true,
+				},
+			},
+		},
+	}), resultSet(t, srs))
 }
 
 func TestBindExecute_IsOptional(t *testing.T) {

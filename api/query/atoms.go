@@ -365,6 +365,29 @@ func (t AbstractTestLabel) BindToRuns(_ ...shared.TestRun) ConcreteQuery {
 	}
 }
 
+// webFeaturesManifestFetcher describes the behavior to fetch Web Features data.
+type webFeaturesManifestFetcher interface {
+	Fetch() (shared.WebFeaturesData, error)
+}
+
+// AbstractTestWebFeature represents the root of a web_feature query, which matches test-level
+// metadata to a searched web feature.
+type AbstractTestWebFeature struct {
+	TestWebFeatureAtom
+	manifestFetcher webFeaturesManifestFetcher
+}
+
+// BindToRuns for AbstractTestWebFeature fetches test-level metadata; it is independent of test runs.
+// nolint:ireturn // TODO: Fix ireturn lint error
+func (t AbstractTestWebFeature) BindToRuns(_ ...shared.TestRun) ConcreteQuery {
+	data, _ := t.manifestFetcher.Fetch()
+
+	return TestWebFeature{
+		WebFeature:      t.WebFeature,
+		WebFeaturesData: data,
+	}
+}
+
 // MetadataQuality represents the root of an "is" query, which asserts known
 // metadata qualities to the results.
 type MetadataQuality int
@@ -539,7 +562,7 @@ func (rq *RunQuery) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.RunIDs) == 0 {
-		return errors.New(`Missing run query property: "run_ids"`)
+		return errors.New(`missing run query property: "run_ids"`)
 	}
 	rq.RunIDs = data.RunIDs
 
@@ -565,7 +588,7 @@ func (tnp *TestNamePattern) UnmarshalJSON(b []byte) error {
 	}
 	patternMsg, ok := data["pattern"]
 	if !ok {
-		return errors.New(`Missing test name pattern property: "pattern"`)
+		return errors.New(`missing test name pattern property: "pattern"`)
 	}
 	var pattern string
 	if err := json.Unmarshal(*patternMsg, &pattern); err != nil {
@@ -586,11 +609,11 @@ func (tnp *SubtestNamePattern) UnmarshalJSON(b []byte) error {
 	}
 	subtestMsg, ok := data["subtest"]
 	if !ok {
-		return errors.New(`Missing subtest name pattern property: "subtest"`)
+		return errors.New(`missing subtest name pattern property: "subtest"`)
 	}
 	var subtest string
 	if err := json.Unmarshal(*subtestMsg, &subtest); err != nil {
-		return errors.New(`Subtest name property "subtest" is not a string`)
+		return errors.New(`subtest name property "subtest" is not a string`)
 	}
 	tnp.Subtest = subtest
 
@@ -607,11 +630,11 @@ func (tp *TestPath) UnmarshalJSON(b []byte) error {
 	}
 	pathMsg, ok := data["path"]
 	if !ok {
-		return errors.New(`Missing test name path property: "path"`)
+		return errors.New(`missing test name path property: "path"`)
 	}
 	var path string
 	if err := json.Unmarshal(*pathMsg, &path); err != nil {
-		return errors.New(`Missing test name path property "path" is not a string`)
+		return errors.New(`missing test name path property "path" is not a string`)
 	}
 
 	tp.Path = path
@@ -634,7 +657,7 @@ func (tse *TestStatusEq) UnmarshalJSON(b []byte) error {
 		data.Product = data.BrowserName
 	}
 	if len(data.Status) == 0 {
-		return errors.New(`Missing test status constraint property: "status"`)
+		return errors.New(`missing test status constraint property: "status"`)
 	}
 
 	var product *shared.ProductSpec
@@ -650,7 +673,7 @@ func (tse *TestStatusEq) UnmarshalJSON(b []byte) error {
 	status := shared.TestStatusValueFromString(statusStr)
 	statusStr2 := status.String()
 	if statusStr != statusStr2 {
-		return fmt.Errorf(`Invalid test status: "%s"`, data.Status)
+		return fmt.Errorf(`invalid test status: "%s"`, data.Status)
 	}
 
 	tse.Product = product
@@ -676,7 +699,7 @@ func (tsn *TestStatusNeq) UnmarshalJSON(b []byte) error {
 		data.Product = data.BrowserName
 	}
 	if len(data.Status.Not) == 0 {
-		return errors.New(`Missing test status constraint property: "status.not"`)
+		return errors.New(`missing test status constraint property: "status.not"`)
 	}
 
 	var product *shared.ProductSpec
@@ -692,7 +715,7 @@ func (tsn *TestStatusNeq) UnmarshalJSON(b []byte) error {
 	status := shared.TestStatusValueFromString(statusStr)
 	statusStr2 := status.String()
 	if statusStr != statusStr2 {
-		return fmt.Errorf(`Invalid test status: "%s"`, data.Status)
+		return fmt.Errorf(`invalid test status: "%s"`, data.Status)
 	}
 
 	tsn.Product = product
@@ -711,7 +734,7 @@ func (n *AbstractNot) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.Not) == 0 {
-		return errors.New(`Missing negation property: "not"`)
+		return errors.New(`missing negation property: "not"`)
 	}
 
 	q, err := unmarshalQ(data.Not)
@@ -730,7 +753,7 @@ func (o *AbstractOr) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.Or) == 0 {
-		return errors.New(`Missing disjunction property: "or"`)
+		return errors.New(`missing disjunction property: "or"`)
 	}
 
 	qs := make([]AbstractQuery, 0, len(data.Or))
@@ -756,7 +779,7 @@ func (a *AbstractAnd) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.And) == 0 {
-		return errors.New(`Missing conjunction property: "and"`)
+		return errors.New(`missing conjunction property: "and"`)
 	}
 
 	qs := make([]AbstractQuery, 0, len(data.And))
@@ -782,7 +805,7 @@ func (e *AbstractExists) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.Exists) == 0 {
-		return errors.New(`Missing conjunction property: "exists"`)
+		return errors.New(`missing conjunction property: "exists"`)
 	}
 
 	qs := make([]AbstractQuery, 0, len(data.Exists))
@@ -808,7 +831,7 @@ func (e *AbstractAll) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.All) == 0 {
-		return errors.New(`Missing conjunction property: "all"`)
+		return errors.New(`missing conjunction property: "all"`)
 	}
 
 	qs := make([]AbstractQuery, 0, len(data.All))
@@ -834,7 +857,7 @@ func (e *AbstractNone) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.None) == 0 {
-		return errors.New(`Missing conjunction property: "none"`)
+		return errors.New(`missing conjunction property: "none"`)
 	}
 
 	qs := make([]AbstractQuery, 0, len(data.None))
@@ -860,7 +883,7 @@ func (e *AbstractSequential) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.Sequential) == 0 {
-		return errors.New(`Missing conjunction property: "sequential"`)
+		return errors.New(`missing conjunction property: "sequential"`)
 	}
 
 	qs := make([]AbstractQuery, 0, len(data.Sequential))
@@ -887,10 +910,10 @@ func (c *AbstractCount) UnmarshalJSON(b []byte) (err error) {
 		return err
 	}
 	if len(data.Count) == 0 {
-		return errors.New(`Missing count property: "count"`)
+		return errors.New(`missing count property: "count"`)
 	}
 	if len(data.Where) == 0 {
-		return errors.New(`Missing count property: "where"`)
+		return errors.New(`missing count property: "where"`)
 	}
 
 	if err := json.Unmarshal(data.Count, &c.Count); err != nil {
@@ -915,10 +938,10 @@ func (l *AbstractLessThan) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(data.Count) == 0 {
-		return errors.New(`Missing lessThan property: "lessThan"`)
+		return errors.New(`missing lessThan property: "lessThan"`)
 	}
 	if len(data.Where) == 0 {
-		return errors.New(`Missing count property: "where"`)
+		return errors.New(`missing count property: "where"`)
 	}
 
 	err := json.Unmarshal(data.Count, &l.Count)
@@ -944,10 +967,10 @@ func (m *AbstractMoreThan) UnmarshalJSON(b []byte) (err error) {
 		return err
 	}
 	if len(data.Count) == 0 {
-		return errors.New(`Missing moreThan property: "moreThan"`)
+		return errors.New(`missing moreThan property: "moreThan"`)
 	}
 	if len(data.Where) == 0 {
-		return errors.New(`Missing count property: "where"`)
+		return errors.New(`missing count property: "where"`)
 	}
 
 	if err := json.Unmarshal(data.Count, &m.Count); err != nil {
@@ -970,11 +993,11 @@ func (l *AbstractLink) UnmarshalJSON(b []byte) error {
 	}
 	patternMsg, ok := data["link"]
 	if !ok {
-		return errors.New(`Missing Link pattern property: "link"`)
+		return errors.New(`missing Link pattern property: "link"`)
 	}
 	var pattern string
 	if err := json.Unmarshal(*patternMsg, &pattern); err != nil {
-		return errors.New(`Missing link pattern property "pattern" is not a string`)
+		return errors.New(`missing link pattern property "pattern" is not a string`)
 	}
 
 	l.Pattern = pattern
@@ -991,14 +1014,40 @@ func (t *AbstractTestLabel) UnmarshalJSON(b []byte) error {
 	}
 	labelMsg, ok := data["label"]
 	if !ok {
-		return errors.New(`Missing label pattern property: "label"`)
+		return errors.New(`missing label pattern property: "label"`)
 	}
 	var label string
 	if err := json.Unmarshal(*labelMsg, &label); err != nil {
-		return errors.New(`Property "label" is not a string`)
+		return errors.New(`property"label" is not a string`)
 	}
 
 	t.Label = label
+
+	return nil
+}
+
+// TestWebFeatureAtom contains the parsed data from a "feature" query atom.
+type TestWebFeatureAtom struct {
+	WebFeature string
+}
+
+// UnmarshalJSON for TestWebFeatureAtom attempts to interpret a query atom as
+// {"feature":<web_feature_string>}.
+func (t *TestWebFeatureAtom) UnmarshalJSON(b []byte) error {
+	var data map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+	webFeatureMsg, ok := data["feature"]
+	if !ok {
+		return errors.New(`missing web feature pattern property: "feature"`)
+	}
+	var webFeature string
+	if err := json.Unmarshal(*webFeatureMsg, &webFeature); err != nil {
+		return errors.New(`property"feature" is not a string`)
+	}
+
+	t.WebFeature = webFeature
 
 	return nil
 }
@@ -1013,12 +1062,12 @@ func (t *AbstractTriaged) UnmarshalJSON(b []byte) error {
 
 	browserNameMsg, ok := data["triaged"]
 	if !ok {
-		return errors.New(`Missing Triaged property: "triaged"`)
+		return errors.New(`missing Triaged property: "triaged"`)
 	}
 
 	var browserName string
 	if err := json.Unmarshal(*browserNameMsg, &browserName); err != nil {
-		return errors.New(`Triaged property "triaged" is not a string`)
+		return errors.New(`triaged property "triaged" is not a string`)
 	}
 
 	var product *shared.ProductSpec
@@ -1044,7 +1093,7 @@ func (q *MetadataQuality) UnmarshalJSON(b []byte) (err error) {
 	}
 	is, ok := data["is"]
 	if !ok {
-		return errors.New(`Missing "is" pattern property: "is"`)
+		return errors.New(`missing "is" pattern property: "is"`)
 	}
 	var quality string
 	if err := json.Unmarshal(*is, &quality); err != nil {
@@ -1067,7 +1116,7 @@ func MetadataQualityFromString(quality string) (MetadataQuality, error) {
 		return MetadataQualityOptional, nil
 	}
 
-	return MetadataQualityUnknown, fmt.Errorf(`Unknown "is" quality "%s"`, quality)
+	return MetadataQualityUnknown, fmt.Errorf(`unknown "is" quality "%s"`, quality)
 }
 
 // nolint:ireturn // TODO: Fix ireturn lint error
@@ -1184,6 +1233,15 @@ func unmarshalQ(b []byte) (AbstractQuery, error) {
 		var t AbstractTestLabel
 		if err := json.Unmarshal(b, &t); err == nil {
 			return t, nil
+		}
+	}
+	{
+		var atom TestWebFeatureAtom
+		if err := json.Unmarshal(b, &atom); err == nil {
+			return AbstractTestWebFeature{
+				TestWebFeatureAtom: atom,
+				manifestFetcher:    searchcacheWebFeaturesManifestFetcher{},
+			}, nil
 		}
 	}
 	const docsFilePath = "wpt.fyi/api/query/README.md"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//go:generate mockgen -destination sharedtest/run_diff_mock.go -package sharedtest github.com/web-platform-tests/wpt.fyi/shared DiffAPI
+//go:generate mockgen -build_flags=--mod=mod -destination sharedtest/run_diff_mock.go -package sharedtest github.com/web-platform-tests/wpt.fyi/shared DiffAPI
 
 package shared
 
@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 
 	mapset "github.com/deckarep/golang-set"
 )
 
 // ErrRunNotInSearchCache is an error for 422 responses from the searchcache.
-var ErrRunNotInSearchCache = errors.New("Run is still being loaded into the searchcache")
+var ErrRunNotInSearchCache = errors.New("run is still being loaded into the searchcache")
 
 // DiffAPI is an abstraction for computing run differences.
 type DiffAPI interface {
@@ -353,11 +353,11 @@ func (d diffAPIImpl) GetRunsDiff(before, after TestRun, filter DiffFilterParam, 
 	}
 	beforeJSON, err := FetchRunResultsJSON(d.ctx, before)
 	if err != nil {
-		return diff, fmt.Errorf("Failed to fetch 'before' results: %s", err.Error())
+		return diff, fmt.Errorf("failed to fetch 'before' results: %s", err.Error())
 	}
 	afterJSON, err := FetchRunResultsJSON(d.ctx, after)
 	if err != nil {
-		return diff, fmt.Errorf("Failed to fetch 'after' results: %s", err.Error())
+		return diff, fmt.Errorf("failed to fetch 'after' results: %s", err.Error())
 	}
 
 	var renames map[string]string

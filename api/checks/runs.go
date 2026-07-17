@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/web-platform-tests/wpt.fyi/api/checks/summaries"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 )
@@ -100,7 +100,9 @@ func getExistingCheckRuns(ctx context.Context, suite shared.CheckSuite) ([]*gith
 	}
 
 	var runs []*github.CheckRun
+	// nolint:exhaustruct // TODO: Fix exhaustruct lint error.
 	options := github.ListCheckRunsOptions{
+		// nolint:exhaustruct // TODO: Fix exhaustruct lint error.
 		ListOptions: github.ListOptions{
 			// 100 is the maximum allowed items per page; see
 			// https://developer.github.com/v3/guides/traversing-with-pagination/#changing-the-number-of-items-received
@@ -126,10 +128,10 @@ func getExistingCheckRuns(ctx context.Context, suite shared.CheckSuite) ([]*gith
 		}
 
 		// Setup for the next call.
-		options.ListOptions.Page = response.NextPage
+		options.Page = response.NextPage
 	}
 
-	return nil, fmt.Errorf("More than 10 pages of CheckRuns returned for ref %s", suite.SHA)
+	return nil, fmt.Errorf("more than 10 pages of CheckRuns returned for ref %s", suite.SHA)
 }
 
 func updateExistingCheckRunSummary(

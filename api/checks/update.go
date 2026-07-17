@@ -67,7 +67,7 @@ func updateCheckHandler(w http.ResponseWriter, r *http.Request) {
 	headRun, baseRun, err := loadRunsToCompare(ctx, filter)
 	if err != nil {
 		msg := "Could not find runs to compare: " + err.Error()
-		log.Errorf(msg)
+		log.Warningf(msg)
 		http.Error(w, msg, http.StatusNotFound)
 
 		return
@@ -313,7 +313,7 @@ func getDiffSummary(
 			}
 		}
 		success := "success"
-		data.CheckState.Conclusion = &success
+		data.Conclusion = &success
 		summary = data
 	} else {
 		// nolint:exhaustruct // TODO: Fix exhaustruct lint error
@@ -333,7 +333,7 @@ func getDiffSummary(
 		}
 		if checksCanBeNonNeutral {
 			actionRequired := "action_required"
-			data.CheckState.Conclusion = &actionRequired
+			data.Conclusion = &actionRequired
 		}
 		summary = data
 	}

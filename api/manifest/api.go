@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//go:generate mockgen -destination mock_manifest/api_mock.go github.com/web-platform-tests/wpt.fyi/api/manifest API
+//go:generate mockgen -build_flags=--mod=mod -destination mock_manifest/api_mock.go github.com/web-platform-tests/wpt.fyi/api/manifest API
 
 package manifest
 
@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 )
 
@@ -79,7 +79,7 @@ func getGitHubReleaseAssetForSHA(aeAPI shared.AppEngineAPI, sha string) (
 			return "", nil, err
 		}
 		if issues == nil || len(issues.Issues) < 1 {
-			return "", nil, fmt.Errorf("No search results found for SHA %s", sha)
+			return "", nil, fmt.Errorf("no search results found for SHA %s", sha)
 		}
 
 		releaseTag = fmt.Sprintf("merge_pr_%d", issues.Issues[0].GetNumber())
@@ -101,7 +101,7 @@ func getGitHubReleaseAssetForSHA(aeAPI shared.AppEngineAPI, sha string) (
 	if err != nil {
 		return "", nil, err
 	} else if release == nil || len(release.Assets) < 1 {
-		return "", nil, fmt.Errorf("No assets found for %s release", releaseTag)
+		return "", nil, fmt.Errorf("no assets found for %s release", releaseTag)
 	}
 	// Get (and unzip) the asset with name "MANIFEST-{sha}.json.gz"
 	for _, asset := range release.Assets {
@@ -121,7 +121,7 @@ func getGitHubReleaseAssetForSHA(aeAPI shared.AppEngineAPI, sha string) (
 		}
 	}
 
-	return "", nil, fmt.Errorf("No manifest asset found for release %s", releaseTag)
+	return "", nil, fmt.Errorf("no manifest asset found for release %s", releaseTag)
 }
 
 // NewRedis creates a new redisReadWritable with the given duration.

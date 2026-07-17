@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -15,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/web-platform-tests/wpt.fyi/api/query"
 	"github.com/web-platform-tests/wpt.fyi/shared"
@@ -84,7 +83,7 @@ func TestHandleMetadataTriage_FailToCachePr(t *testing.T) {
 	mocktm.EXPECT().Triage(gomock.Any()).Return("https://github.com/web-platform-tests/wpt-metadata/pull/1", nil)
 
 	mockSet := sharedtest.NewMockRedisSet(mockCtrl)
-	mockSet.EXPECT().Add(shared.PendingMetadataCacheKey, "1").Return(errors.New("Cache failed"))
+	mockSet.EXPECT().Add(shared.PendingMetadataCacheKey, "1").Return(errors.New("cache failed"))
 
 	handleMetadataTriage(ctx, mockgac, mocktm, nil, mockSet, w, req)
 
@@ -120,7 +119,7 @@ func TestHandleMetadataTriage_FailToCacheMetadata(t *testing.T) {
 	mockSet.EXPECT().Add(shared.PendingMetadataCacheKey, "1").Return(nil)
 
 	mockCache := sharedtest.NewMockObjectCache(mockCtrl)
-	mockCache.EXPECT().Put(shared.PendingMetadataCachePrefix+"1", gomock.Any()).Return(errors.New("Cache failed"))
+	mockCache.EXPECT().Put(shared.PendingMetadataCachePrefix+"1", gomock.Any()).Return(errors.New("cache failed"))
 
 	handleMetadataTriage(ctx, mockgac, mocktm, mockCache, mockSet, w, req)
 
@@ -292,7 +291,7 @@ func TestMetadataHandler_POST_MissingProducts(t *testing.T) {
 	body :=
 		`{
         "exists": [{
-            "link": "bugs.chromium.org"
+            "link": "issues.chromium.org"
         }]
     }`
 	bodyReader := strings.NewReader(body)
@@ -309,7 +308,7 @@ func TestMetadataHandler_POST_NotLink(t *testing.T) {
 	body :=
 		`{
         "exists": [{
-            "pattern": "bugs.chromium.org"
+            "pattern": "issues.chromium.org/"
         }]
     }`
 	bodyReader := strings.NewReader(string(body))
@@ -327,7 +326,7 @@ func TestMetadataHandler_POST_NotJustLink(t *testing.T) {
 		`{
         "exists": [{
             "and": [
-                {"pattern": "bugs.chromium.org"},
+                {"pattern": "issues.chromium.org"},
                 {"link": "abc"}
             ]
         }]
@@ -487,7 +486,7 @@ func TestPendingMetadataHandler_EmptyObjectCache(t *testing.T) {
 		shared.PendingMetadataCachePrefix + "456",
 	}
 	for _, key := range keys {
-		mockCache.EXPECT().Get(key, gomock.Any()).Return(errors.New("Cache miss"))
+		mockCache.EXPECT().Get(key, gomock.Any()).Return(errors.New("cache miss"))
 	}
 
 	handlePendingMetadata(ctx, mockCache, mockSet, w, r)
@@ -510,7 +509,7 @@ func TestPendingMetadataHandler_Fail(t *testing.T) {
 
 	mockCache := sharedtest.NewMockObjectCache(mockCtrl)
 	mockSet := sharedtest.NewMockRedisSet(mockCtrl)
-	mockSet.EXPECT().GetAll(shared.PendingMetadataCacheKey).Return(nil, errors.New("Cache miss"))
+	mockSet.EXPECT().GetAll(shared.PendingMetadataCacheKey).Return(nil, errors.New("cache miss"))
 
 	handlePendingMetadata(ctx, mockCache, mockSet, w, r)
 

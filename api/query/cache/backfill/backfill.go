@@ -36,7 +36,7 @@ type backfillMonitor struct {
 // phases of search cache development.
 const bytesPerRun = uint64(6.5e+7)
 
-var errNilIndex = errors.New("Index to backfill is nil")
+var errNilIndex = errors.New("index to backfill is nil")
 
 // GetDatastore constructs a shared.Datastore interface that loads runs from Datastore
 // in reverse cronological order, by shared.TestRun.TimeStart.
@@ -69,7 +69,7 @@ func (m *backfillMonitor) Stop() error {
 	return m.ProxyMonitor.Stop()
 }
 
-// nolint:ireturn // TODO: Fix ireturn lint error
+// nolint:all // TODO: Fix ireturn lint error
 func (*backfillIndex) Bind([]shared.TestRun, query.ConcreteQuery) (query.Plan, error) {
 	return nil, nil
 }
@@ -117,6 +117,7 @@ func FillIndex(
 
 func startBackfillMonitor(store shared.Datastore, logger shared.Logger, maxBytes uint64, m *backfillMonitor) error {
 	// FetchRuns will return at most N runs for each product, so divide the upper bound by the number of products.
+	//nolint:gosec
 	limit := int(maxBytes/bytesPerRun) / len(shared.GetDefaultProducts())
 	runsByProduct, err := store.TestRunQuery().LoadTestRuns(shared.GetDefaultProducts(), nil, nil, nil, nil, &limit, nil)
 	if err != nil {

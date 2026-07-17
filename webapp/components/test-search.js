@@ -11,7 +11,6 @@ import { WPTFlags } from './wpt-flags.js';
 import './ohm.js';
 import { AllBrowserNames } from './product-info.js';
 
-/* eslint-enable */
 const statuses = [
   'pass',
   'ok',
@@ -106,6 +105,7 @@ const QUERY_GRAMMAR = ohm.grammar(`
       | isExp
       | triagedExp
       | labelExp
+      | webFeatureExp
       | statusExp
       | subtestExp
       | pathExp
@@ -132,6 +132,9 @@ const QUERY_GRAMMAR = ohm.grammar(`
 
     labelExp
       = caseInsensitive<"label"> ":" nameFragment
+
+    webFeatureExp
+      = caseInsensitive<"feature"> ":" nameFragment
 
     isExp
       = caseInsensitive<"is"> ":" metadataQualityLiteral
@@ -325,6 +328,10 @@ const QUERY_SEMANTICS = QUERY_GRAMMAR.createSemantics().addOperation('eval', {
     const ps = r.eval();
     return ps.length === 0 ? emptyQuery : {label: ps };
   },
+  webFeatureExp: (l, colon, r) => {
+    const ps = r.eval();
+    return ps.length === 0 ? emptyQuery : {feature: ps };
+  },
   subtestExp: (l, colon, r) => {
     return { subtest: r.eval() };
   },
@@ -447,6 +454,7 @@ class TestSearch extends WPTFlags(PolymerElement) {
       } else {
         try {
           this.structuredQuery = Object.freeze(this.parseAndInterpretQuery(query));
+        // eslint-disable-next-line no-unused-vars
         } catch (err) {
           // TODO: Handle query parse/interpret error.
         }

@@ -2,21 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-runtime: go120
-instance_class: F4_1G
+runtime: custom
+env: flex
+resources:
+  cpu: 2
+  memory_gb: 4
+
+automatic_scaling:
+  min_num_instances: 4
+  max_num_instances: 20
+  cool_down_period_sec: 180
 
 inbound_services:
 - warmup
 
 default_expiration: "1d"
 
+# TODO: can we remove this now that service 'default' is not App Engine
+# Standard? Same change for app.yaml and the VPC mention in app-engine.md.
 vpc_access_connector:
   name: projects/wptdashboard-staging/locations/us-east4/connectors/appengine-connector
+
+liveness_check:
+  path: "/_ah/liveness_check"
+
+readiness_check:
+  path: "/_ah/readiness_check"
+  app_start_timeout_sec: 300
+  check_interval_sec: 30
+  timeout_sec: 10
+  failure_threshold: 4
+  success_threshold: 2
 
 env_variables:
   REDISHOST: "10.171.142.203"
   REDISPORT: "6379"
 
+# TODO: Remove these handlers and align with app.yaml once #4231 is completed.
 # Also refer to dispatch.yaml for higher-priority routing rules.
 handlers:
 # Special dynamic components:

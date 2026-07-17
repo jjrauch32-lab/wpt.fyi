@@ -16,7 +16,7 @@ import (
 	"time"
 
 	jwt "github.com/golang-jwt/jwt"
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	"golang.org/x/oauth2"
 )
@@ -91,7 +91,7 @@ func getSignedJWT(ctx context.Context, appID int64) (string, error) {
 	}
 	block, _ := pem.Decode([]byte(secret))
 	if block == nil {
-		return "", errors.New("Failed to decode private key")
+		return "", errors.New("failed to decode private key")
 	}
 	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {

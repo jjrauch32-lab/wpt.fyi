@@ -1,5 +1,4 @@
 //go:build medium
-// +build medium
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -20,8 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	"github.com/web-platform-tests/wpt.fyi/shared/sharedtest"
@@ -167,7 +166,7 @@ func TestScheduleResultsTask(t *testing.T) {
 			id = taskName
 			return id, nil
 		})
-	task, err := a.ScheduleResultsTask("blade-runner", results, screenshots, nil)
+	task, err := a.ScheduleResultsTask("blade-runner", results, screenshots, nil, nil)
 	assert.Equal(t, id, task)
 	assert.Nil(t, err)
 

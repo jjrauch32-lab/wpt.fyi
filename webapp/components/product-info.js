@@ -10,16 +10,20 @@ const DisplayNames = (() => {
   ['firefox', 'firefox-experimental'].forEach(n => m.set(n, 'Firefox'));
   ['safari', 'safari-experimental'].forEach(n => m.set(n, 'Safari'));
   m.set('android_webview', 'WebView');
+  m.set('blitz', 'Blitz');
   m.set('chrome_android', 'ChromeAndroid');
+  m.set('chrome_ios', 'ChromeIOS');
   m.set('chromium', 'Chromium');
   m.set('deno', 'Deno');
   m.set('firefox_android', 'Firefox Android');
   m.set('flow', 'Flow');
+  m.set('ladybird', 'Ladybird');
   m.set('node.js', 'Node.js');
   m.set('servo', 'Servo');
   m.set('uc', 'UC Browser');
   m.set('wktr', 'macOS WebKit');
   m.set('webkitgtk', 'WebKitGTK');
+  m.set('wpewebkit', 'WPE WebKit');
   // Platforms
   m.set('android', 'Android');
   m.set('linux', 'Linux');
@@ -35,6 +39,7 @@ const DisplayNames = (() => {
   // Sources
   m.set('azure', 'Azure Pipelines');
   m.set('buildbot', 'Buildbot');
+  m.set('github-actions', 'GitHub Actions');
   m.set('msedge', 'MS Edge');
   m.set('taskcluster', 'Taskcluster');
   return m;
@@ -46,8 +51,8 @@ const versionPatterns = Object.freeze({
 });
 
 // The set of all browsers known to the wpt.fyi UI.
-const AllBrowserNames = Object.freeze(['android_webview', 'chrome_android', 'chrome',
-  'chromium', 'deno', 'edge', 'firefox_android', 'firefox', 'flow', 'node.js', 'safari', 'servo', 'webkitgtk', 'wktr']);
+const AllBrowserNames = Object.freeze(['android_webview', 'blitz', 'chrome_android', 'chrome_ios', 'chrome',
+  'chromium', 'deno', 'edge', 'firefox_android', 'firefox', 'flow', 'ladybird', 'node.js', 'safari', 'servo', 'webkitgtk', 'wpewebkit', 'wktr']);
 
 // The list of default browsers used in cases where the user has not otherwise
 // chosen a set of browsers (e.g. which browsers to show runs for). Stored as
@@ -62,7 +67,7 @@ const DefaultProducts = DefaultProductSpecs.map(p => Object.freeze(parseProductS
 
 const CommitTypes = new Set(['pr_head', 'master']);
 const Channels = new Set(['stable', 'beta', 'experimental']);
-const Sources = new Set(['buildbot', 'taskcluster', 'msedge', 'azure']);
+const Sources = new Set(['buildbot', 'taskcluster', 'msedge', 'azure', 'github-actions']);
 const Platforms = new Set(['linux', 'win', 'mac', 'ios', 'android']);
 const SemanticLabels = [
   { property: '_channel', values: Channels },
@@ -126,7 +131,6 @@ function productFromRun(run) {
   return product;
 }
 
-// eslint-disable-next-line no-unused-vars
 const ProductInfo = (superClass) => class extends superClass {
   static get properties() {
     return {
@@ -172,16 +176,16 @@ const ProductInfo = (superClass) => class extends superClass {
     } else if (name === 'android_webview') {
       return `/static/${name}.png`;
 
-    } else if (name === 'chrome_android') {
+    } else if (name === 'chrome_android' || name === 'chrome_ios') {
       // TODO(kyle): A temporary workaround; remove this check when
-      // chrome_android is mapped to chrome on wptrunner.
+      // chrome_android and chrome_ios is mapped to chrome on wptrunner.
       return '/static/chrome_64x64.png';
     } else if (name === 'firefox_android') {
       // For now use the geckoview logo for Firefox for Android,
       // although it would be better to have some variant of the Firefox logo.
       return '/static/geckoview_64x64.png';
 
-    } else if (name !== 'chromium' && name !== 'deno' && name !== 'flow' && name !== 'node.js' && name !== 'servo' && name !== 'wktr') {  // Products without per-channel logos.
+    } else if (name !== 'blitz' && name !== 'chromium' && name !== 'deno' && name !== 'flow' && name !== 'ladybird' && name !== 'node.js' && name !== 'servo' && name !== 'wktr' && name !== 'webkitgtk' && name !== 'wpewebkit') {  // Products without per-channel logos.
       let channel;
       const candidates = ['beta', 'dev', 'canary', 'nightly', 'preview'];
       for (const label of candidates) {
@@ -205,7 +209,7 @@ const ProductInfo = (superClass) => class extends superClass {
   }
 
   minorIsSignificant(browserName) {
-    return browserName === 'deno' || browserName === 'flow' || browserName === 'safari' || browserName === 'webkitgtk';
+    return browserName === 'deno' || browserName === 'flow' || browserName === 'safari' || browserName === 'webkitgtk' || browserName === 'wpewebkit';
   }
 
   /**

@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -10,7 +9,7 @@ package summaries
 import (
 	"testing"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/stretchr/testify/assert"
 )
 

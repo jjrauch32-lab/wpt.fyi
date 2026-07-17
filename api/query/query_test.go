@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -14,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	"github.com/web-platform-tests/wpt.fyi/shared/sharedtest"
+	"go.uber.org/mock/gomock"
 )
 
 func TestGetRedisKey(t *testing.T) {
@@ -105,7 +104,7 @@ func TestLoadSummaries_fail(t *testing.T) {
 		[]byte(`{"/a/b/c":{"s":"O","c":[1,2]}}`),
 	}
 
-	storeMiss := errors.New("No such summary file")
+	storeMiss := errors.New("no such summary file")
 	cachedStore.EXPECT().Get(keys[0], urls[0], gomock.Any()).Do(func(cid, sid, iv interface{}) {
 		ptr := iv.(*[]byte)
 		*ptr = summaryBytes[0]

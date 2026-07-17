@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/web-platform-tests/wpt.fyi/api/query"
 	"github.com/web-platform-tests/wpt.fyi/api/query/cache/index"
 	"github.com/web-platform-tests/wpt.fyi/shared"
@@ -185,4 +185,50 @@ func cleanOrphanedPendingMetadata(
 		newRemovePRs = append(newRemovePRs, pr)
 	}
 	*toBeRemovedPRs = newRemovePRs
+}
+
+// StartWebFeaturesManifestPollingService performs web features manifest related
+// services via simple polling every interval duration.
+func StartWebFeaturesManifestPollingService(ctx context.Context, logger shared.Logger, interval time.Duration) {
+	logger.Infof("Starting web features manifest polling service.")
+	gitHubClient, err := shared.NewAppEngineAPI(ctx).GetGitHubClient()
+	if err != nil {
+		logger.Infof("Unable to get GitHub client: %v", err)
+	}
+
+	for {
+		if gitHubClient != nil {
+			keepWebFeaturesManifestUpdated(
+				ctx,
+				logger,
+				shared.NewGitHubWebFeaturesClient(gitHubClient))
+		} else {
+			logger.Infof("GitHub client is not initialized, skipping keepWebFeaturesManifestUpdated.")
+		}
+		time.Sleep(interval)
+	}
+}
+
+// webFeaturesGetter provides a thin interface to get web features data.
+type webFeaturesGetter interface {
+	Get(context.Context) (shared.WebFeaturesData, error)
+}
+
+// keepWebFeaturesManifestUpdated fetches a new copy of the web features data
+// and updates the local cache.
+func keepWebFeaturesManifestUpdated(
+	ctx context.Context,
+	logger shared.Logger,
+	featuresGetter webFeaturesGetter) {
+	logger.Infof("Running keepWebFeaturesManifestUpdated...")
+
+	data, err := featuresGetter.Get(ctx)
+	if err != nil {
+		logger.Errorf("unable to fetch web features manifest during query. %s", err.Error())
+
+		return
+	}
+	if data != nil {
+		query.SetWebFeaturesDataCache(data)
+	}
 }

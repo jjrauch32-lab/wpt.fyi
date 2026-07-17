@@ -70,12 +70,16 @@ func (p ProductSpec) IsExperimental() bool {
 // DisplayName returns a capitalized version of the product's name.
 func (p ProductSpec) DisplayName() string {
 	switch p.BrowserName {
+	case "blitz":
+		return "Blitz"
 	case "chrome":
 		return "Chrome"
 	case "chromium":
 		return "Chromium"
 	case "chrome_android":
 		return "ChromeAndroid"
+	case "chrome_ios":
+		return "ChromeIOS"
 	case "android_webview":
 		return "WebView"
 	case "deno":
@@ -88,6 +92,8 @@ func (p ProductSpec) DisplayName() string {
 		return "Firefox Android"
 	case "flow":
 		return "Flow"
+	case "ladybird":
+		return "Ladybird"
 	case "node.js":
 		return "Node.js"
 	case "safari":
@@ -98,6 +104,8 @@ func (p ProductSpec) DisplayName() string {
 		return "macOS WebKit"
 	case "webkitgtk":
 		return "WebKitGTK"
+	case "wpewebkit":
+		return "WPE WebKit"
 	default:
 		return p.BrowserName
 	}

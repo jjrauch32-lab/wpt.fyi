@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -16,10 +15,10 @@ import (
 
 	"github.com/web-platform-tests/wpt.fyi/api/query"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	metrics "github.com/web-platform-tests/wpt.fyi/shared/metrics"
+	"go.uber.org/mock/gomock"
 )
 
 func TestInvalidNumShards(t *testing.T) {
@@ -114,7 +113,7 @@ func TestIngestRun_loaderError(t *testing.T) {
 		ID:            1,
 		RawResultsURL: "http://example.com/results.json",
 	}
-	loaderErr := errors.New("Failed to load test results")
+	loaderErr := errors.New("failed to load test results")
 	loader.EXPECT().Load(run).Return(nil, loaderErr)
 	assert.Equal(t, loaderErr, i.IngestRun(run))
 }

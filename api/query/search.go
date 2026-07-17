@@ -47,7 +47,7 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sh searchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" && r.Method != "POST" {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		http.Error(w, "Invalid HTTP method", http.StatusBadRequest)
 
 		return
@@ -196,7 +196,11 @@ func (sh structuredSearchHandler) useSearchcache(_ http.ResponseWriter, r *http.
 			msg = fmt.Sprintf("%s: %s", msg, string(errBody))
 			resp.Body = io.NopCloser(bytes.NewBuffer(errBody))
 		}
-		logger.Errorf(msg)
+		if resp.StatusCode == http.StatusUnprocessableEntity {
+			logger.Warningf(msg)
+		} else {
+			logger.Errorf(msg)
+		}
 	}
 
 	return resp, nil
@@ -304,7 +308,7 @@ var shouldCacheSearchResponse = func(ctx context.Context, statusCode int, payloa
 	}
 
 	if len(resp.Results) == 0 {
-		shared.GetLogger(ctx).Errorf("Query yielded no results; not caching")
+		shared.GetLogger(ctx).Infof("Query yielded no results; not caching")
 
 		return false
 	}

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//go:generate mockgen -destination sharedtest/github_oauth_mock.go -package sharedtest github.com/web-platform-tests/wpt.fyi/shared GitHubOAuth,GitHubAccessControl
+//go:generate mockgen -build_flags=--mod=mod -destination sharedtest/github_oauth_mock.go -package sharedtest github.com/web-platform-tests/wpt.fyi/shared GitHubOAuth,GitHubAccessControl
 
 package shared
 
@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 	ghOAuth "golang.org/x/oauth2/github"
@@ -149,7 +149,7 @@ func (gaci githubAccessControlImpl) IsValidWPTMember() (bool, error) {
 		return false, err
 	}
 	if !valid {
-		return false, errors.New("Invalid access token")
+		return false, errors.New("invalid access token")
 	}
 	isMember, _, err := gaci.botClient.Organizations.IsMember(gaci.ctx, "web-platform-tests", gaci.user.GitHubHandle)
 	return isMember, err
@@ -161,7 +161,7 @@ func (gaci githubAccessControlImpl) IsValidAdmin() (bool, error) {
 		return false, err
 	}
 	if !valid {
-		return false, errors.New("Invalid access token")
+		return false, errors.New("invalid access token")
 	}
 	key := gaci.ds.NewNameKey("Admin", gaci.user.GitHubHandle)
 	var dst struct{}

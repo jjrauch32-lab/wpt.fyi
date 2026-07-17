@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//go:generate mockgen -destination sharedtest/metadata_util_mock.go -package sharedtest github.com/web-platform-tests/wpt.fyi/shared MetadataFetcher
+//go:generate mockgen -build_flags=--mod=mod -destination sharedtest/metadata_util_mock.go -package sharedtest github.com/web-platform-tests/wpt.fyi/shared MetadataFetcher
 
 package shared
 
@@ -16,7 +16,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 )
 
 // PendingMetadataCacheKey is the key for the set that stores a list of
@@ -70,7 +70,7 @@ func getWPTMetadataArchiveWithURL(client *http.Client, url string, ref *string) 
 
 	statusCode := resp.StatusCode
 	if !(statusCode >= 200 && statusCode <= 299) {
-		err := fmt.Errorf("Bad status code:%d, Unable to download wpt-metadata", statusCode)
+		err := fmt.Errorf("bad status code:%d, Unable to download wpt-metadata", statusCode)
 		return nil, err
 	}
 

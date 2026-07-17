@@ -395,6 +395,11 @@ for its format). This field can be repeated to include multiple links (for chunk
 __`screenshot_url`__: A URL to a **gzipped** screenshot database produced by `wpt run --log-screenshot`.
 This field can be repeated to include multiple links (for chunked reports).
 
+__`archive_url`__: A URL to a ZIP archive containing files like `wpt_report*.json` and
+`wpt_screenshot*.json`, similar to `result_url` and `screenshot_url` respectively. This field can
+be repeated to include multiple links (for chunked reports). This field cannot co-exist with
+`result_url` or `screenshot_url`.
+
 __`callback_url`__: (Optional) A URL that the processor should `POST` when successful, which will
 create the TestRun. Defaults to /api/results/create in the current project's environment (e.g. wpt.fyi for
 wptdashboard, staging.wpt.fyi for wptdashboard-staging).
@@ -571,7 +576,7 @@ __`product`__ : browser[version[os[version]]]. e.g. `chrome-63.0-linux`
 
 #### Post Examples
 - POST /api/metadata?product=chrome\&product=firefox \
-    exists:='[{"link":"bugs.chromium.org"}]'
+    exists:='[{"link":"issues.chromium.org"}]'
 
 <details><summary><b>Example JSON</b></summary>
 
@@ -579,12 +584,12 @@ __`product`__ : browser[version[os[version]]]. e.g. `chrome-63.0-linux`
 {
   "/IndexedDB/bindings-inject-key.html": [
     {
-      "url": "bugs.chromium.org/p/chromium/issues/detail?id=934844"
+      "url": "issues.chromium.org/issues/934844"
     }
   ],
   "/html/browsers/history/the-history-interface/007.html": [
     {
-      "url": "bugs.chromium.org/p/chromium/issues/detail?id=592874"
+      "url": "issues.chromium.org/issues/592874"
     }
   ]
 }

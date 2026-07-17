@@ -40,8 +40,6 @@ Combines the filters such that there exists some result in the row that satisfie
 
 #### All and None
 
-> BETA: This feature is under development and may change without warning.
-
     all([query1] [query2])
 
 Combines filters such that they must all apply to all runs.
@@ -61,8 +59,6 @@ useful when there are multiple runs with the same product, e.g. to find a regres
 
 #### Count
 
-> BETA: This feature is under development and may change without warning.
-
     count:[number]([query1] [query2])
 
 Requires that the number of results matching the given query/queries is precisely
@@ -78,8 +74,6 @@ Safari is the only one missing a result:
     three(status:!missing) safari:missing
 
 ##### Count inequality
-
-> BETA: This feature is under development and may change without warning.
 
     count[inequality][number]([query1])
 
@@ -150,8 +144,6 @@ or, negation,
 Where `[product]` is a product specification (e.g. `safari`, `chrome-69`).
 
 #### Meta qualities
-
-> BETA: This feature is under development and may change without warning.
 
 Filters the results to values which possess/exhibit a given quality.
 
@@ -313,11 +305,11 @@ Same as satuts, but with a specific product-spec.
 
 Search untriaged issues -
 
-    chrome:fail and !link:bugs.chromium.org
+    chrome:fail and !link:issues.chromium.org
 
 Search triaged issues -
 
-    chrome:pass and link:bugs.chromium.org
+    chrome:pass and link:issues.chromium.org
 
 #### triaged
 
@@ -362,3 +354,20 @@ Search triaged tests with a label interop-2022:
 
 See [Meta qualities](#meta-qualities) above for more information on other
 meta qualities than `"different"`.
+
+#### feature
+
+`feature` query atoms perform a search for tests that have a matching
+feature label, regardless of browsers.
+
+    {"feature": [web-feature-name]}
+
+Where web-feature-name is a string, case-insensitive and matches the filename base
+for any of the .yml files in the
+[features](https://github.com/web-platform-dx/web-features/blob/main/features/) directory.
+
+ E.g.
+
+Search the [nesting](https://github.com/web-platform-dx/web-features/blob/main/features/nesting.yml) feature:
+
+    feature:nesting

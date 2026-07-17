@@ -1,3 +1,4 @@
+//go:build small
 // +build small
 
 // Copyright 2017 The WPT Dashboard Project. All rights reserved.
@@ -154,6 +155,20 @@ func TestGetProductsOrDefault_BrowserParam_SafariChrome(t *testing.T) {
 	assert.Equal(t, 2, len(products))
 	assert.Equal(t, "safari", products[0].BrowserName)
 	assert.Equal(t, "chrome", products[1].BrowserName)
+}
+
+func TestGetProductsOrDefault_BrowserParam_WebKitNightly(t *testing.T) {
+	r := httptest.NewRequest("GET", "https://wpt.fyi/results/?products=wpewebkit-2.49.1%20(294826@main)@0123456789,webkitgtk-2.47.1%20(263120@main)", nil)
+	filters, err := ParseTestRunFilterParams(r.URL.Query())
+	products := filters.GetProductsOrDefault()
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(products))
+	assert.Equal(t, "wpewebkit", products[0].BrowserName)
+	assert.Equal(t, "2.49.1 (294826@main)", products[0].BrowserVersion)
+	assert.Equal(t, "0123456789", products[0].Revision)
+	assert.Equal(t, "webkitgtk", products[1].BrowserName)
+	assert.Equal(t, "2.47.1 (263120@main)", products[1].BrowserVersion)
+	assert.Equal(t, "latest", products[1].Revision)
 }
 
 func TestGetProductsOrDefault_BrowserParam_MultiBrowserParam_SafariChrome(t *testing.T) {
@@ -395,6 +410,55 @@ func TestParseLabelsParam_LabelsAndLabel_Duplicate(t *testing.T) {
 	assert.Len(t, labels, 1)
 }
 
+// Generic method that can return the pointer of anything.
+func valuePtr[T any](in T) *T {
+	return &in
+}
+
+func TestParseViewParam(t *testing.T) {
+	testCases := []struct {
+		name           string
+		input          url.Values
+		expectedOutput *string
+	}{
+		{
+			name: "subtest",
+			input: map[string][]string{
+				"view": {"subtest"},
+			},
+			expectedOutput: valuePtr("subtest"),
+		},
+		{
+			name: "interop",
+			input: map[string][]string{
+				"view": {"interop"},
+			},
+			expectedOutput: valuePtr("interop"),
+		},
+		{
+			name: "test",
+			input: map[string][]string{
+				"view": {"test"},
+			},
+			expectedOutput: valuePtr("test"),
+		},
+		{
+			name: "badinput",
+			input: map[string][]string{
+				"view": {"badinput"},
+			},
+			expectedOutput: nil,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			output, err := ParseViewParam(tc.input)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedOutput, output)
+		})
+	}
+}
+
 func TestParseVersion(t *testing.T) {
 	v, err := ParseVersion("63.0")
 	assert.Nil(t, err)
@@ -466,6 +530,18 @@ func TestParseProductSpec_BrowserVersion(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "safari", productSpec.BrowserName)
 	assert.Equal(t, "100 preview", productSpec.BrowserVersion)
+
+	productSpec, err = ParseProductSpec("wpewebkit-2.49.1 (294826@main)")
+	assert.Nil(t, err)
+	assert.Equal(t, "wpewebkit", productSpec.BrowserName)
+	assert.Equal(t, "2.49.1 (294826@main)", productSpec.BrowserVersion)
+	assert.Equal(t, "latest", productSpec.Revision)
+
+	productSpec, err = ParseProductSpec("webkitgtk-2.49.1 (294826@main)@0123456789aaaaabbbbbcccccdddddeeeeefffff")
+	assert.Nil(t, err)
+	assert.Equal(t, "webkitgtk", productSpec.BrowserName)
+	assert.Equal(t, "2.49.1 (294826@main)", productSpec.BrowserVersion)
+	assert.Equal(t, "0123456789aaaaabbbbbcccccdddddeeeeefffff", productSpec.Revision)
 }
 
 func TestParseProductSpec_OS(t *testing.T) {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//go:generate mockgen -destination mock_taskcluster/webhook_mock.go github.com/web-platform-tests/wpt.fyi/api/taskcluster API
+//go:generate mockgen -build_flags=--mod=mod -destination mock_taskcluster/webhook_mock.go github.com/web-platform-tests/wpt.fyi/api/taskcluster API
 
 package taskcluster
 
@@ -17,9 +17,9 @@ import (
 	"sync"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	tcurls "github.com/taskcluster/taskcluster-lib-urls"
-	"github.com/taskcluster/taskcluster/v44/clients/client-go/tcqueue"
+	"github.com/taskcluster/taskcluster/v90/clients/client-go/tcqueue"
 	uc "github.com/web-platform-tests/wpt.fyi/api/receiver/client"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 )
@@ -85,11 +85,11 @@ type apiImpl struct {
 // GetStatusEventInfo turns a StatusEventPayload into an EventInfo struct.
 func GetStatusEventInfo(status StatusEventPayload, log shared.Logger, api API) (EventInfo, error) {
 	if status.SHA == nil {
-		return EventInfo{}, errors.New("No sha on taskcluster status event")
+		return EventInfo{}, errors.New("no sha on taskcluster status event")
 	}
 
 	if status.TargetURL == nil {
-		return EventInfo{}, errors.New("No target_url on taskcluster status event")
+		return EventInfo{}, errors.New("no target_url on taskcluster status event")
 	}
 
 	rootURL, taskGroupID, taskID := ParseTaskclusterURL(*status.TargetURL)
@@ -119,7 +119,7 @@ func GetStatusEventInfo(status StatusEventPayload, log shared.Logger, api API) (
 // GetCheckSuiteEventInfo turns a github.CheckSuiteEvent into an EventInfo struct.
 func GetCheckSuiteEventInfo(checkSuite github.CheckSuiteEvent, log shared.Logger, api API) (EventInfo, error) {
 	if checkSuite.GetCheckSuite().GetHeadSHA() == "" {
-		return EventInfo{}, errors.New("No sha on taskcluster check_suite event")
+		return EventInfo{}, errors.New("no sha on taskcluster check_suite event")
 	}
 
 	log.Debugf("Parsing check_suite event for commit %s", checkSuite.GetCheckSuite().GetHeadSHA())
@@ -129,7 +129,7 @@ func GetCheckSuiteEventInfo(checkSuite github.CheckSuiteEvent, log shared.Logger
 	if owner != shared.WPTRepoOwner || repo != shared.WPTRepoName {
 		log.Errorf("Received check_suite event from invalid repo %s/%s", owner, repo)
 
-		return EventInfo{}, errors.New("Invalid source repository")
+		return EventInfo{}, errors.New("invalid source repository")
 	}
 
 	runs, err := api.ListCheckRuns(owner, repo, checkSuite.GetCheckSuite().GetID())
@@ -140,7 +140,7 @@ func GetCheckSuiteEventInfo(checkSuite github.CheckSuiteEvent, log shared.Logger
 	}
 
 	if len(runs) == 0 {
-		return EventInfo{}, errors.New("No check_runs for check_suite")
+		return EventInfo{}, errors.New("no check_runs for check_suite")
 	}
 
 	log.Debugf("Found %d check_runs for check_suite", len(runs))
@@ -157,7 +157,7 @@ func GetCheckSuiteEventInfo(checkSuite github.CheckSuiteEvent, log shared.Logger
 				run.GetDetailsURL(),
 			)
 
-			return EventInfo{}, errors.New("Unable to parse check_run details URL")
+			return EventInfo{}, errors.New("unable to parse check_run details URL")
 		}
 		if rootURL != "" && rootURL != matches[1] {
 			log.Errorf(
@@ -167,7 +167,7 @@ func GetCheckSuiteEventInfo(checkSuite github.CheckSuiteEvent, log shared.Logger
 				matches[1],
 			)
 
-			return EventInfo{}, errors.New("Conflicting root URLs for runs in check_suite")
+			return EventInfo{}, errors.New("conflicting root URLs for runs in check_suite")
 		}
 		rootURL = matches[1]
 		taskID := matches[2]
@@ -471,7 +471,9 @@ func (api apiImpl) GetTaskGroupInfo(rootURL string, groupID string) (*TaskGroupI
 
 func (api apiImpl) ListCheckRuns(owner string, repo string, checkSuiteID int64) ([]*github.CheckRun, error) {
 	var runs []*github.CheckRun
+	// nolint:exhaustruct // TODO: Fix exhaustruct lint error.
 	options := github.ListCheckRunsOptions{
+		// nolint:exhaustruct // TODO: Fix exhaustruct lint error.
 		ListOptions: github.ListOptions{
 			// 100 is the maximum allowed items per page[0], but due to
 			// https://github.com/web-platform-tests/wpt/issues/27243 we
@@ -500,10 +502,10 @@ func (api apiImpl) ListCheckRuns(owner string, repo string, checkSuiteID int64) 
 		}
 
 		// Setup for the next call.
-		options.ListOptions.Page = response.NextPage
+		options.Page = response.NextPage
 	}
 
-	return runs, errors.New("More than 500 CheckRuns returned for CheckSuite")
+	return runs, errors.New("more than 500 CheckRuns returned for CheckSuite")
 }
 
 // ArtifactURLs holds the results and screenshot URLs for a Taskcluster run.
@@ -618,7 +620,7 @@ func CreateAllRuns(
 			}
 
 			uploadClient := uc.NewClient(aeAPI)
-			err := uploadClient.CreateRun(sha, username, password, urls.Results, urls.Screenshots, labelsForRun)
+			err := uploadClient.CreateRun(sha, username, password, urls.Results, urls.Screenshots, nil, labelsForRun)
 			if err != nil {
 				errors <- err
 

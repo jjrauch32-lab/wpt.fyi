@@ -1,3 +1,4 @@
+//go:build medium
 // +build medium
 
 // Copyright 2019 The WPT Dashboard Project. All rights reserved.
@@ -14,13 +15,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/gorilla/securecookie"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/golang/mock/gomock"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	"github.com/web-platform-tests/wpt.fyi/shared/sharedtest"
+	"go.uber.org/mock/gomock"
 )
 
 var (

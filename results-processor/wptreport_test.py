@@ -598,14 +598,14 @@ class HelpersTest(unittest.TestCase):
         }
         self.assertSetEqual(
             prepare_labels(r, '', 'blade-runner'),
-            {'blade-runner', 'dev', 'experimental', 'chrome'}
+            {'blade-runner', 'dev', 'chrome'}
         )
 
         # Chrome Canary
         r._report['run_info']['browser_channel'] = 'canary'
         self.assertSetEqual(
             prepare_labels(r, '', 'blade-runner'),
-            {'blade-runner', 'canary', 'nightly', 'chrome'}
+            {'blade-runner', 'canary', 'experimental', 'chrome'}
         )
 
         # Chrome Nightly
@@ -623,6 +623,14 @@ class HelpersTest(unittest.TestCase):
              'webkitgtk_minibrowser'}
         )
 
+        # WPE WebKit Nightly
+        r._report['run_info']['product'] = 'wpewebkit_minibrowser'
+        self.assertSetEqual(
+            prepare_labels(r, '', 'blade-runner'),
+            {'blade-runner', 'nightly', 'experimental',
+             'wpewebkit_minibrowser'}
+        )
+
         # Firefox Nightly
         r._report['run_info']['product'] = 'firefox'
         self.assertSetEqual(
@@ -637,16 +645,16 @@ class HelpersTest(unittest.TestCase):
             {'blade-runner', 'beta', 'firefox'}
         )
 
-    def test_normalize_product_edge_webdriver(self):
+    def test_normalize_product_edge(self):
         r = WPTReport()
         r._report = {
             'run_info': {
-                'product': 'edge_webdriver',
+                'product': 'edge',
             }
         }
         self.assertSetEqual(
             normalize_product(r),
-            {'edge', 'webdriver', 'edge_webdriver'}
+            {'edge', 'edgechromium'}
         )
         self.assertEqual(
             r.run_info['product'],
@@ -683,6 +691,22 @@ class HelpersTest(unittest.TestCase):
         self.assertEqual(
             r.run_info['product'],
             'webkitgtk'
+        )
+
+    def test_normalize_product_wpewebkit_minibrowser(self):
+        r = WPTReport()
+        r._report = {
+            'run_info': {
+                'product': 'wpewebkit_minibrowser',
+            }
+        }
+        self.assertSetEqual(
+            normalize_product(r),
+            {'wpewebkit', 'minibrowser'}
+        )
+        self.assertEqual(
+            r.run_info['product'],
+            'wpewebkit'
         )
 
     def test_normalize_product_noop(self):

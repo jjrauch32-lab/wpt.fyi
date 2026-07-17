@@ -15,8 +15,16 @@
 SHELL := /bin/bash
 # WPTD_PATH will have a trailing slash, e.g. /home/user/wpt.fyi/
 WPTD_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-NODE_SELENIUM_PATH := $(WPTD_PATH)webapp/node_modules/selenium-standalone/.selenium/
+GECKODRIVER_TAG := v0.36.0
+GECKODRIVER_PATH=/usr/bin/geckodriver
 FIREFOX_PATH := /usr/bin/firefox
+CHROME_VERSION := 138.0.7204.94
+CHROME_INSTALL_DIR := /opt/chrome-for-testing
+ # CFT_BINARY can also be 'chrome-headless-shell'
+CFT_BINARY := chrome
+CFT_FOLDER := $(CFT_BINARY)-linux64
+CHROME_ACTUAL_PATH := $(CHROME_INSTALL_DIR)/$(CFT_FOLDER)/$(CFT_BINARY)
+# Needed because some tools are hardcoded to /usr/bin/google-chrome
 CHROME_PATH := /usr/bin/google-chrome
 CHROMEDRIVER_PATH=/usr/bin/chromedriver
 USE_FRAME_BUFFER := true
@@ -26,8 +34,8 @@ VERBOSE := -v
 GO_FILES := $(shell find $(WPTD_PATH) -type f -name '*.go')
 GO_TEST_FILES := $(shell find $(WPTD_PATH) -type f -name '*_test.go')
 # Golangci version should be updated periodically.
-# See: https://golangci-lint.run/usage/install/#other-ci
-GOLANGCI_LINT_VERSION := v1.52.2
+# See: https://golangci-lint.run/welcome/install/
+GOLANGCI_LINT_VERSION := v2.1.6
 
 build: go_build
 
@@ -50,10 +58,9 @@ github_action_go_setup:
 	else \
 		echo "Did not detect github workspace. Skipping." ; \
 	fi
-# NOTE: We prune before generate, because node_modules are packr'd into the
+# NOTE: We prune before generate, because node_modules are embedded into the
 # binary (and part of the build).
-go_build: git mockgen packr2 github_action_go_setup
-	make webapp_node_modules_prod
+go_build: git mockgen github_action_go_setup webapp_node_modules_prod
 	go generate ./...
 	# Check all packages without producing any output.
 	go build -v ./...
@@ -63,7 +70,8 @@ go_build: git mockgen packr2 github_action_go_setup
 go_build_dev:
 	@ # Disable packr to always serve local node modules and dynamic components.
 	@ # There's thus no need to prune node_modules.
-	go build -v -tags skippackr ./webapp/web
+	@ # Disable inlining and optimizations that can interfere with debugging.
+	go build -v -tags skippackr -gcflags=all="-N -l" ./webapp/web
 
 go_lint: golint go_test_tag_lint
 	golint -set_exit_status ./api/...
@@ -73,9 +81,10 @@ go_lint: golint go_test_tag_lint
 	golint -set_exit_status ./webdriver/...
 
 # TODO: run on /shared/, /util/, /webapp/, /webdriver/
-golangci_lint: golangci-lint
+golangci_lint: golangci-lint github_action_go_setup
+	golangci-lint cache clean
 	golangci-lint run ./api/...
-	
+
 go_test_tag_lint:
 	@ # Printing a list of test files without +build tag, asserting empty...
 	@TAGLESS=$$(grep -PL '\/\/(\s?\+build|go:build) !?(small|medium|large|cloud)' $(GO_TEST_FILES)); \
@@ -101,7 +110,7 @@ go_firefox_test: firefox geckodriver
 go_chrome_test: chrome chromedriver
 	make _go_webdriver_test BROWSER=chrome
 
-go_cloud_test: gcloud_login
+go_cloud_test: go_build gcloud_login
 	gcloud config set project wptdashboard-staging; \
 	if [[ -f "$(WPTD_PATH)client-secret.json" ]]; then \
 		echo "Running with client-secret.json credentials instead of possible system credentials. This should happen for CI runs."; \
@@ -117,11 +126,11 @@ webdriver_node_deps:
 
 # _go_webdriver_test is not intended to be used directly; use go_firefox_test or
 # go_chrome_test instead.
-_go_webdriver_test: var-BROWSER java go_build xvfb geckodriver dev_appserver_deps gcc
+_go_webdriver_test: var-BROWSER java go_build xvfb geckodriver chromedriver dev_appserver_deps gcc
 	@ # This Go test manages Xvfb itself, so we don't start/stop Xvfb for it.
 	@ # The following variables are defined here because we don't know the
 	@ # path before installing geckodriver as it includes version strings.
-	GECKODRIVER_PATH="$(shell find $(NODE_SELENIUM_PATH)geckodriver/ -type f -name '*geckodriver')"; \
+	GECKODRIVER_PATH=$(GECKODRIVER_PATH) \
 	COMMAND="go test $(VERBOSE) -timeout=15m -tags=large ./webdriver -args \
 		-firefox_path=$(FIREFOX_PATH) \
 		-geckodriver_path=$$GECKODRIVER_PATH \
@@ -138,17 +147,19 @@ web_components_test: xvfb firefox chrome webapp_node_modules_all psmisc
 
 dev_appserver_deps: gcloud-app-engine-go gcloud-cloud-datastore-emulator gcloud-beta java
 
-# Note: If we change to downloading chrome from Chrome For Testing, modify the
-# `chromedriver` target below to use the `known-good-versions-with-downloads.json` endpoint.
-# More details can be found in the comment for the `chromedriver` target.
-chrome: wget
-	if [[ -z "$$(which google-chrome)" ]]; then \
-		ARCHIVE=google-chrome-stable_current_amd64.deb; \
-		wget -q https://dl.google.com/linux/direct/$${ARCHIVE}; \
-		sudo apt-get update; \
-		sudo dpkg --install $${ARCHIVE} 2>/dev/null || true; \
-		sudo apt-get install --fix-broken --fix-missing -qqy; \
-		sudo dpkg --install $${ARCHIVE} 2>/dev/null; \
+chrome: wget unzip
+	if [[ ! -f "$(CHROME_ACTUAL_PATH)" ]]; then \
+		CHROME_CFT_URL="https://storage.googleapis.com/chrome-for-testing-public/$(CHROME_VERSION)/linux64/$(CFT_FOLDER).zip"; \
+		TEMP_DIR=$$(mktemp -d); \
+		wget -q -O $${TEMP_DIR}/$(CFT_FOLDER).zip $${CHROME_CFT_URL}; \
+		unzip -q $${TEMP_DIR}/$(CFT_FOLDER).zip -d $${TEMP_DIR}; \
+		sudo mkdir -p $(CHROME_INSTALL_DIR); \
+		sudo mv $${TEMP_DIR}/$(CFT_FOLDER) $(CHROME_INSTALL_DIR)/; \
+		sudo apt update; \
+		while read pkg ; do sudo apt-get satisfy -y --no-install-recommends "$${pkg}" ; done < $(CHROME_INSTALL_DIR)/$(CFT_FOLDER)/deb.deps; \
+		sudo chmod +x $(CHROME_ACTUAL_PATH); \
+		sudo ln -sf $(CHROME_ACTUAL_PATH) $(CHROME_PATH); \
+		rm -rf $${TEMP_DIR}; \
 	fi
 
 # Pull ChromeDriver from Chrome For Testing (CfT)
@@ -157,10 +168,6 @@ chrome: wget
 #
 # CfT only has ChromeDriver URLs for chrome versions >=115. But assuming `chrome`
 # target above remains pulling the latest stable, this will not be a problem.
-#
-# Until we also pull chrome from CfT, we should use the latest-patch-versions-per-build-with-downloads.json.
-# When we make the switch, we can download from the known-good-versions-with-downloads.json endpoint too.
-# More details: https://github.com/web-platform-tests/wpt.fyi/pull/3433/files#r1282787489
 chromedriver: wget unzip chrome jq
 	if [[ ! -f "$(CHROMEDRIVER_PATH)" ]]; then \
 		CHROME_VERSION=$$(google-chrome --version | grep -ioE "[0-9]+\.[0-9]+\.[0-9]+"); \
@@ -174,13 +181,22 @@ chromedriver: wget unzip chrome jq
 
 firefox: bzip2 wget
 	if [[ -z "$$(which firefox)" ]]; then \
-		wget -O firefox.tar.bz2 -q "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"; \
+		wget -O firefox.tar.xz -q "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"; \
 		mkdir -p $$HOME/browsers; \
-		tar -xjf firefox.tar.bz2 -C $$HOME/browsers; \
+		tar -xaf firefox.tar.xz -C $$HOME/browsers; \
 		sudo ln -s $$HOME/browsers/firefox/firefox $(FIREFOX_PATH); \
 	fi
 
-geckodriver: node-wct-local
+geckodriver: wget unzip curl jq
+	if [[ ! -f "$(GECKODRIVER_PATH)" ]]; then \
+		GECKODRIVER_URL="https://github.com/mozilla/geckodriver/releases/download/${GECKODRIVER_TAG}/geckodriver-${GECKODRIVER_TAG}-linux64.tar.gz"; \
+		TEMP_DIR=$$(mktemp -d); \
+		wget -q -O $${TEMP_DIR}/geckodriver-linux64.tar.gz $${GECKODRIVER_URL}; \
+		tar -xzf $${TEMP_DIR}/geckodriver-linux64.tar.gz -C $${TEMP_DIR}; \
+		sudo mv $${TEMP_DIR}/geckodriver $(GECKODRIVER_PATH); \
+		sudo chmod +x $(GECKODRIVER_PATH); \
+		rm -rf $${TEMP_DIR}; \
+	fi
 
 golangci-lint: curl gpg
 	if [ "$$(which golangci-lint)" == "" ]; then \
@@ -194,22 +210,19 @@ golint: git
 
 mockgen: git
 	if [ "$$(which mockgen)" == "" ]; then \
-		go install github.com/golang/mock/mockgen; \
-	fi
-
-packr2: git
-	if [ "$$(which packr2)" == "" ]; then \
-		go install github.com/gobuffalo/packr/v2/packr2; \
+		go install go.uber.org/mock/mockgen; \
 	fi
 
 package_service: var-APP_PATH
 	# Trim the potential "app.staging.yaml" suffix.
 	if [[ "$(APP_PATH)" == "api/query/cache/service"* ]]; then \
 		APP_PATH="api/query/cache/service"; \
+	elif [[ "$(APP_PATH)" == "webapp/web"* ]]; then \
+		APP_PATH="webapp/web"; \
 	else \
 		APP_PATH="$(APP_PATH)"; \
 	fi ; \
-	if [[ "$${APP_PATH}" == "api/query/cache/service" ]]; then \
+	if [[ "$${APP_PATH}" == "api/query/cache/service" || "$${APP_PATH}" == "webapp/web" ]]; then \
 		TMP_DIR=$$(mktemp -d); \
 		rm -rf $(WPTD_PATH)$${APP_PATH}/wpt.fyi; \
 		cp -r $(WPTD_PATH)* $${TMP_DIR}/; \
@@ -232,7 +245,7 @@ gcc: apt-get-gcc
 git: apt-get-git
 jq: apt-get-jq
 psmisc: apt-get-psmisc
-python3: apt-get-python3.9
+python3: apt-get-python3.11
 tox: apt-get-tox
 unzip: apt-get-unzip
 wget: apt-get-wget
@@ -240,7 +253,7 @@ wget: apt-get-wget
 java:
 	@ # java has a different apt-get package name.
 	if [[ "$$(which java)" == "" ]]; then \
-		sudo apt-get install -qqy --no-install-suggests openjdk-8-jdk; \
+		sudo apt-get install -qqy --no-install-suggests java-11-amazon-corretto-jdk; \
 	fi
 
 gpg:
@@ -257,7 +270,7 @@ inotifywait:
 
 node: curl gpg
 	if [[ "$$(which node)" == "" ]]; then \
-		curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -; \
+		curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -; \
 		sudo apt-get install -qqy nodejs; \
 	fi
 
@@ -294,14 +307,16 @@ deploy_staging: deployment_state var-BRANCH_NAME
 		util/deploy.sh -q -b $(BRANCH_NAME) $(APP_PATH); \
 	fi
 	rm -rf $(WPTD_PATH)api/query/cache/service/wpt.fyi
+	rm -rf $(WPTD_PATH)webapp/web/wpt.fyi
 
 cleanup_staging_versions: gcloud_login
 	$(WPTD_PATH)/util/cleanup-versions.sh
 
 deploy_production: deployment_state
 	gcloud config set project wptdashboard
-	util/deploy.sh -r $(APP_PATH)
+	util/deploy.sh -r ${QUIET:+-q} $(APP_PATH)
 	rm -rf $(WPTD_PATH)api/query/cache/service/wpt.fyi
+	rm -rf $(WPTD_PATH)webapp/web/wpt.fyi
 
 webapp_node_modules_all: node
 	cd webapp; npm install

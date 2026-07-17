@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -11,10 +10,10 @@ import (
 	"errors"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/web-platform-tests/wpt.fyi/api/query/cache/index"
 	"github.com/web-platform-tests/wpt.fyi/shared/sharedtest"
+	gomock "go.uber.org/mock/gomock"
 )
 
 func TestNilIndex(t *testing.T) {
@@ -31,7 +30,7 @@ func TestFetchErr(t *testing.T) {
 	store := sharedtest.NewMockDatastore(ctrl)
 	query := sharedtest.NewMockTestRunQuery(ctrl)
 	idx := index.NewMockIndex(ctrl)
-	expected := errors.New("Fetch error")
+	expected := errors.New("fetch error")
 	store.EXPECT().TestRunQuery().Return(query)
 	query.EXPECT().LoadTestRuns(gomock.Any(), nil, nil, nil, nil, gomock.Any(), nil).Return(nil, expected)
 	_, err := FillIndex(store, nil, nil, 1, uint(10), uint64(1), 0.0, idx)

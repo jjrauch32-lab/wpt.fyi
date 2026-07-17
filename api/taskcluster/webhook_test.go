@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -19,14 +18,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v75/github"
 	"github.com/stretchr/testify/assert"
 	uc "github.com/web-platform-tests/wpt.fyi/api/receiver/client"
 	tc "github.com/web-platform-tests/wpt.fyi/api/taskcluster"
 	mock_tc "github.com/web-platform-tests/wpt.fyi/api/taskcluster/mock_taskcluster"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	"github.com/web-platform-tests/wpt.fyi/shared/sharedtest"
+	"go.uber.org/mock/gomock"
 )
 
 type branchInfos []*github.Branch
@@ -433,6 +432,7 @@ func TestTaskNameRegex(t *testing.T) {
 	assert.Equal(t, []string{"firefox-nightly", "testharness"}, tc.TaskNameRegex.FindStringSubmatch("wpt-firefox-nightly-testharness-5")[1:])
 	assert.Equal(t, []string{"firefox-stable", "wdspec"}, tc.TaskNameRegex.FindStringSubmatch("wpt-firefox-stable-wdspec-1")[1:])
 	assert.Equal(t, []string{"webkitgtk_minibrowser-nightly", "testharness"}, tc.TaskNameRegex.FindStringSubmatch("wpt-webkitgtk_minibrowser-nightly-testharness-2")[1:])
+	assert.Equal(t, []string{"wpewebkit_minibrowser-nightly", "testharness"}, tc.TaskNameRegex.FindStringSubmatch("wpt-wpewebkit_minibrowser-nightly-testharness-2")[1:])
 	assert.Nil(t, tc.TaskNameRegex.FindStringSubmatch("wpt-foo-bar--1"))
 	assert.Nil(t, tc.TaskNameRegex.FindStringSubmatch("wpt-foo-bar-"))
 }

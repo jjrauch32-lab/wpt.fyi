@@ -99,7 +99,7 @@ func (qh queryHandler) getRunsAndFilters(in shared.QueryFilter) (shared.TestRuns
 	var testRuns shared.TestRuns
 	var err error
 
-	if filters.RunIDs == nil || len(filters.RunIDs) == 0 {
+	if len(filters.RunIDs) == 0 {
 		var runFilters shared.TestRunFilter
 		var sha string
 		var err error
@@ -144,7 +144,7 @@ func (qh queryHandler) loadSummaries(testRuns shared.TestRuns) ([]summary, error
 			s := summary{}
 			data, loadErr := qh.loadSummary(testRun)
 			if err == nil && loadErr != nil {
-				err = fmt.Errorf("Failed to load test run %v: %s", testRun.ID, loadErr.Error())
+				err = fmt.Errorf("failed to load test run %v: %s", testRun.ID, loadErr.Error())
 
 				return
 			}

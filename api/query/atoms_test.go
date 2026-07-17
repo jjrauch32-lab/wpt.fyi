@@ -1,5 +1,4 @@
 //go:build small
-// +build small
 
 // Copyright 2018 The WPT Dashboard Project. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -11,10 +10,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/web-platform-tests/wpt.fyi/shared"
 	"github.com/web-platform-tests/wpt.fyi/shared/sharedtest"
+	"go.uber.org/mock/gomock"
 )
 
 func TestStructuredQuery_empty(t *testing.T) {
@@ -532,6 +531,61 @@ func TestStructuredQuery_andTestLabels(t *testing.T) {
 	assert.Equal(t, RunQuery{RunIDs: []int64{0, 1, 2}, AbstractQuery: AbstractAnd{[]AbstractQuery{AbstractTestLabel{Label: "interop1"}, AbstractTestLabel{Label: "interop2"}}}}, rq)
 }
 
+func TestStructuredQuery_testfeature(t *testing.T) {
+	var rq RunQuery
+	err := json.Unmarshal([]byte(`{
+        "run_ids": [0, 1, 2],
+        "query": {
+            "exists": [{
+                "feature": "feature1"
+            }]
+        }
+    }`), &rq)
+	assert.Nil(t, err)
+	assert.Equal(t, RunQuery{RunIDs: []int64{0, 1, 2},
+		AbstractQuery: AbstractExists{[]AbstractQuery{
+			AbstractTestWebFeature{
+				TestWebFeatureAtom: TestWebFeatureAtom{
+					WebFeature: "feature1",
+				},
+				manifestFetcher: searchcacheWebFeaturesManifestFetcher{},
+			}},
+		}}, rq)
+}
+
+func TestStructuredQuery_andTestFeatures(t *testing.T) {
+	var rq RunQuery
+	err := json.Unmarshal([]byte(`{
+		"run_ids": [0, 1, 2],
+		"query": {
+			"and": [
+				{"feature": "feature1"},
+				{"feature": "feature2"}
+			]
+		}
+	}`), &rq)
+	assert.Nil(t, err)
+	assert.Equal(t,
+		RunQuery{
+			RunIDs: []int64{0, 1, 2},
+			AbstractQuery: AbstractAnd{
+				[]AbstractQuery{
+					AbstractTestWebFeature{
+						TestWebFeatureAtom: TestWebFeatureAtom{
+							WebFeature: "feature1",
+						},
+						manifestFetcher: searchcacheWebFeaturesManifestFetcher{},
+					},
+					AbstractTestWebFeature{
+						TestWebFeatureAtom: TestWebFeatureAtom{
+							WebFeature: "feature2",
+						},
+						manifestFetcher: searchcacheWebFeaturesManifestFetcher{},
+					},
+				}}},
+		rq)
+}
+
 func TestStructuredQuery_isDifferent(t *testing.T) {
 	var rq RunQuery
 	err := json.Unmarshal([]byte(`{
@@ -919,11 +973,11 @@ func TestStructuredQuery_bindExistsWithTwoProducts(t *testing.T) {
 			})
 		if i%2 == 0 { // Evens are edge
 			or1.Args = append(or1.Args,
-						RunTestStatusEq{
-							Run:    int64(i),
-							Status: 1,
-						},
-				)
+				RunTestStatusEq{
+					Run:    int64(i),
+					Status: 1,
+				},
+			)
 		} else { // Odds are firefox
 			or2.Args = append(or2.Args,
 				RunTestStatusEq{
@@ -1162,6 +1216,54 @@ func TestStructuredQuery_bindTestLabel(t *testing.T) {
 		Label: "interop",
 		Metadata: map[string][]string{
 			"/testC/c.html": {"labelA"},
+		},
+	}
+	assert.Equal(t, expect, q.BindToRuns(runs...))
+}
+
+type testWebFeaturesManifestFetcher struct {
+	data shared.WebFeaturesData
+	err  error
+}
+
+func (t testWebFeaturesManifestFetcher) Fetch() (shared.WebFeaturesData, error) {
+	return t.data, t.err
+}
+
+func TestStructuredQuery_bindTestWebFeature(t *testing.T) {
+	mockManifestFetcher := testWebFeaturesManifestFetcher{
+		data: shared.WebFeaturesData{
+			"grid": {"/css/css-grid/bar.html": nil},
+			"avif": {"/avif/foo.html": nil},
+		},
+		err: nil,
+	}
+
+	safari := shared.ParseProductSpecUnsafe("safari")
+	firefox := shared.ParseProductSpecUnsafe("firefox")
+	q := AbstractTestWebFeature{
+		TestWebFeatureAtom: TestWebFeatureAtom{
+			WebFeature: "grid",
+		},
+		manifestFetcher: mockManifestFetcher,
+	}
+
+	runs := shared.TestRuns{
+		{
+			ID:                int64(0),
+			ProductAtRevision: safari.ProductAtRevision,
+		},
+		{
+			ID:                int64(1),
+			ProductAtRevision: firefox.ProductAtRevision,
+		},
+	}
+
+	expect := TestWebFeature{
+		WebFeature: "grid",
+		WebFeaturesData: shared.WebFeaturesData{
+			"grid": {"/css/css-grid/bar.html": nil},
+			"avif": {"/avif/foo.html": nil},
 		},
 	}
 	assert.Equal(t, expect, q.BindToRuns(runs...))

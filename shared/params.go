@@ -58,7 +58,7 @@ func ParseSHA(shaParam string) (sha string, err error) {
 	if shaParam != "" && shaParam != "latest" {
 		sha = shaParam
 		if !SHARegex.MatchString(shaParam) {
-			return "latest", fmt.Errorf("Invalid sha param value: %s", shaParam)
+			return "latest", fmt.Errorf("invalid sha param value: %s", shaParam)
 		}
 	}
 	return sha, err
@@ -77,13 +77,43 @@ func ParseProductSpecs(specs ...string) (products ProductSpecs, err error) {
 	return products, nil
 }
 
+// splitAtNonMainAt returns the string split at the "@" characters but avoiding to
+// split the string on the first ocurrence of "@main". This is needed because
+// WebKit nightlies have versions in the format of "wpewebkit-2.49.1 (294826@main)"
+// where "2.49.1 (294826@main)" is the BrowserVersion.
+func splitAtNonMainAt(stringInput string) []string {
+    if !strings.Contains(stringInput, "@main") {
+        return strings.Split(stringInput, "@")
+    }
+    if strings.Count(stringInput, "@") == 1 {
+        return []string{stringInput}
+    }
+    posFirstAtNoMain := -1
+    for i := 0; i < len(stringInput); i++ {
+        if stringInput[i] == '@' {
+            if !(i+5 <= len(stringInput) && stringInput[i+1:i+5] == "main") {
+                posFirstAtNoMain = i
+                break
+            }
+        }
+    }
+    posFirstAtMain := strings.Index(stringInput, "@main")
+    if posFirstAtNoMain == -1 || posFirstAtMain > posFirstAtNoMain {
+        return strings.Split(stringInput, "@")
+    }
+    beforeFirstAtNoMain := stringInput[:posFirstAtNoMain]
+    afterFirstAtNoMain  := stringInput[posFirstAtNoMain+1:] // drop the "@"
+    partsAfterFirstAtNoMain  := strings.Split(afterFirstAtNoMain, "@")
+    return append([]string{beforeFirstAtNoMain}, partsAfterFirstAtNoMain...)
+}
+
 // ParseProductSpec parses a test-run spec into a ProductAtRevision struct.
 func ParseProductSpec(spec string) (productSpec ProductSpec, err error) {
 	errMsg := "invalid product spec: " + spec
 	productSpec.Revision = "latest"
 	name := spec
 	// @sha (optional)
-	atSHAPieces := strings.Split(spec, "@")
+	atSHAPieces := splitAtNonMainAt(spec)
 	if len(atSHAPieces) > 2 {
 		return productSpec, errors.New(errMsg)
 	} else if len(atSHAPieces) == 2 {
@@ -161,7 +191,7 @@ func ParseVersion(version string) (result *Version, err error) {
 	pieces := strings.Split(version, " ")
 	channel := ""
 	if len(pieces) > 2 {
-		return nil, fmt.Errorf("Invalid version: %s", version)
+		return nil, fmt.Errorf("invalid version: %s", version)
 	} else if len(pieces) > 1 {
 		channel = " " + pieces[1]
 		version = pieces[0]
@@ -176,13 +206,13 @@ func ParseVersion(version string) (result *Version, err error) {
 
 	pieces = strings.Split(version, ".")
 	if len(pieces) > 4 {
-		return nil, fmt.Errorf("Invalid version: %s", version)
+		return nil, fmt.Errorf("invalid version: %s", version)
 	}
 	numbers := make([]int, len(pieces))
 	for i, piece := range pieces {
 		n, err := strconv.ParseInt(piece, 10, 0)
 		if err != nil {
-			return nil, fmt.Errorf("Invalid version: %s", version)
+			return nil, fmt.Errorf("invalid version: %s", version)
 		}
 		numbers[i] = int(n)
 	}
@@ -214,7 +244,7 @@ func ParseBrowserParam(v url.Values) (product *Product, err error) {
 			BrowserName: browser,
 		}, nil
 	}
-	return nil, fmt.Errorf("Invalid browser param value: %s", browser)
+	return nil, fmt.Errorf("invalid browser param value: %s", browser)
 }
 
 // ParseBrowsersParam returns a list of browser params for the request.
@@ -227,7 +257,7 @@ func ParseBrowsersParam(v url.Values) (browsers []string, err error) {
 	}
 	for _, b := range browserParams {
 		if !IsBrowserName(b) {
-			return nil, fmt.Errorf("Invalid browser param value %s", b)
+			return nil, fmt.Errorf("invalid browser param value %s", b)
 		}
 		browsers = append(browsers, b)
 	}
@@ -333,7 +363,7 @@ func ParseMaxCountParamWithDefault(v url.Values, defaultValue int) (count int, e
 // ParseViewParam parses the 'view' parameter and ensures it is a valid value.
 func ParseViewParam(v url.Values) (*string, error) {
 	viewParam := v.Get("view")
-	if viewParam == "subtest" || viewParam == "interop" {
+	if viewParam == "subtest" || viewParam == "interop" || viewParam == "test" {
 		return &viewParam, nil
 	}
 	return nil, nil
@@ -502,7 +532,7 @@ func ParseQueryParamInt(v url.Values, key string) (*int, error) {
 	}
 	i, err := strconv.Atoi(value)
 	if err != nil {
-		return &i, fmt.Errorf("Invalid %s value: %s", key, value)
+		return &i, fmt.Errorf("invalid %s value: %s", key, value)
 	}
 	return &i, err
 }
